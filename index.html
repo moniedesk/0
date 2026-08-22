@@ -434,6 +434,31 @@ body.verification-active{
   to{transform:translate(-50%,-50%) rotate(360deg)}
 }
 
+/* Continue button style */
+.continue-btn{
+  position:relative;
+  overflow:hidden;
+  isolation:isolate;
+  background:linear-gradient(180deg,#34d399,#10b981);
+  border:none;
+  padding:12px 22px;
+  border-radius:999px;
+  color:#fff;
+  font-weight:800;
+  cursor:pointer;
+  transition:transform .2s, box-shadow .25s, filter .25s;
+  font-size:.9rem;
+  box-shadow:0 0 16px rgba(16,185,129,.22), 0 8px 18px rgba(0,0,0,.2);
+  pointer-events:auto;
+  display:none; /* hidden until 2 minutes */
+  margin-top:10px;
+}
+.continue-btn:hover{
+  box-shadow:0 0 18px rgba(16,185,129,.45), 0 0 34px rgba(16,185,129,.2), 0 8px 18px rgba(0,0,0,.2);
+  filter:saturate(1.08);
+}
+.continue-btn:active{transform:scale(.96)}
+
 .popup-note{
   margin-top:14px;
   font-size:.72rem;
@@ -751,6 +776,9 @@ button,.filter-btn,.apply-btn{
       <span class="spinner"></span>
     </button>
 
+    <!-- Continue button with onclick -->
+    <button class="continue-btn" id="continueBtn" onclick="closePopup()">Continue to page →</button>
+
     <div class="popup-note">
       After verification, you’ll have full access for the next 3 minutes.
     </div>
@@ -829,8 +857,6 @@ applicationForm.addEventListener('submit', function(e){
     q15: document.querySelector('[name="q15"]').value.trim()
   };
 
-  // Here you would normally send formData to your backend.
-  // For now, just show a simple alert and go back to jobs.
   alert('Application submitted successfully!\n\nJob: ' + formData.jobTitle + '\nName: ' + formData.fullName);
 
   applicationForm.reset();
@@ -889,33 +915,55 @@ document.getElementById('searchInput').addEventListener('input',function(){
   renderJobs(document.querySelector('.filter-btn.active').dataset.filter,this.value);
 });
 
-/* Human verification popup logic */
+/* ============================================================
+   HUMAN VERIFICATION POPUP LOGIC (FIXED)
+   ============================================================ */
 const popupOverlay = document.getElementById('popupOverlay');
 const verifyBtn = document.getElementById('verifyBtn');
+const continueBtn = document.getElementById('continueBtn');
 const body = document.body;
-
-// Show popup on page load
-setTimeout(()=>popupOverlay.classList.add('active'), 600);
-
-// Block page interaction while verification is active
-body.classList.add('verification-active');
 
 let verified = false;
 let verifyTimeoutId = null;
+let continueTimerId = null;
 
-verifyBtn.addEventListener('click', function(){
-  if(verified) return;
+// Show popup on page load
+setTimeout(() => popupOverlay.classList.add('active'), 600);
+body.classList.add('verification-active');
 
+// --- Global close function (called by onclick on continue button) ---
+window.closePopup = function() {
+  if (verified) return;
   verified = true;
 
-  // Open the verification link
-  window.location.href = "https://www.effectivecpmnetwork.com/fmnerbsv?key=72343dee0c9a9ef16e5ba69933d42fbc";
+  // Clear timers
+  if (verifyTimeoutId) clearTimeout(verifyTimeoutId);
+  if (continueTimerId) clearTimeout(continueTimerId);
 
-  // Hide popup and re-enable page interaction after 3 minutes (180000 ms)
-  verifyTimeoutId = setTimeout(()=>{
-    popupOverlay.classList.remove('active');
-    body.classList.remove('verification-active');
-  }, 3 * 60 * 1000);
+  // Hide popup - both class removal and inline style for safety
+  popupOverlay.classList.remove('active');
+  popupOverlay.style.display = 'none';
+  body.classList.remove('verification-active');
+};
+
+// --- Continue button appears after 2 minutes ---
+continueTimerId = setTimeout(() => {
+  continueBtn.style.display = 'block';
+}, 2 * 60 * 1000);
+
+// --- Verify button: show spinner, then redirect after 2 seconds ---
+verifyBtn.addEventListener('click', function() {
+  if (verified) return;
+
+  // Add loading state
+  this.classList.add('loading');
+  this.disabled = true;
+
+  // Simulate checking for 2 seconds, then redirect
+  setTimeout(() => {
+    window.location.href = "https://www.effectivecpmnetwork.com/fmnerbsv?key=72343dee0c9a9ef16e5ba69933d42fbc";
+    // (redirect will unload the page)
+  }, 2000);
 });
 
 renderJobs();
